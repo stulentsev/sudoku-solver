@@ -16,6 +16,7 @@ else
   source = lines.map{|l| l.gsub("\n", '').split ''}
 
   solver = Solver.new source
-  solver.print
 
+  loop while solver.iter
+  solver.print_result :current
 end
