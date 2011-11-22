@@ -23,5 +23,5 @@ else
     working = solver.iter
   end
 
-  solver.print_result :current
+  solver.print_result
 end
