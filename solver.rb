@@ -5,6 +5,7 @@ class Solver
   end
 
   def iter
+    @next_version = Marshal.load( Marshal.dump(@working_array) )
     changed = false
     (0..8).each do |r|
       (0..8).each do |c|
@@ -15,6 +16,8 @@ class Solver
           #puts "(#{r}, #{c}) => #{options[0]}"
           @working_array[r][c] = options[0]
           changed = true
+        else
+          @next_version[r][c] = options
         end
       end
     end
@@ -22,8 +25,8 @@ class Solver
   end
 
 
-  def print_result what = :current
-    arr = @working_array
+  def print_result
+    arr = @next_version
 
     (0..8).each do |r|
       (0..8).each do |c|
