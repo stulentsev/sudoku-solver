@@ -1,47 +1,36 @@
 class Solver
   def initialize arr
     @source_array = arr
-    @working_array = @source_array.dup
-    @next_version = @working_array.dup
-
+    @working_array = Marshal.load( Marshal.dump(arr) )
   end
 
   def iter
+    changed = false
     (0..8).each do |r|
       (0..8).each do |c|
         next if @working_array[r][c] != ' '
 
         options = (1..9).to_a.map(&:to_s) - get_row(r) - get_column(c) - get_quadrant(r, c)
         if options.length == 1
+          #puts "(#{r}, #{c}) => #{options[0]}"
           @working_array[r][c] = options[0]
-          return true
-        else
-          @next_version[r][c] = options
+          changed = true
         end
       end
     end
-    false
+    changed
   end
 
 
   def print_result what = :current
-    arr = case what
-            when :current
-              @working_array
-            when :original
-              @source_array
-            when :next
-              @next_version
-            else
-              []
-          end
+    arr = @working_array
 
-    arr.each do |line|
-      line.each do |el|
-        if el.is_a? String
-          print el.foreground(:blue)
+    (0..8).each do |r|
+      (0..8).each do |c|
+        if @source_array[r][c] != ' '
+          print arr[r][c].foreground(:blue)
         else
-          print el.join(',').foreground(:green)
+          print arr[r][c].foreground(:green)
         end
         print "\t"
       end
@@ -50,7 +39,9 @@ class Solver
   end
 
   def get_row r
-    @working_array[r].select { |i| i != ' ' }
+    res = @working_array[r].select { |i| i != ' ' }
+    #puts "row #{r}: #{res.join '|'}"
+    res
   end
 
   def get_column c
@@ -60,6 +51,7 @@ class Solver
       res << el if el != ' '
     end
 
+    #puts "column #{c}: #{res.join '|'}"
     res
   end
 
@@ -75,6 +67,7 @@ class Solver
       end
     end
 
+    #puts "quadrant #{r1}, #{c1}: #{res.join ','}"
     res
   end
 end

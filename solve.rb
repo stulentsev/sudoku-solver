@@ -13,10 +13,15 @@ else
   end
 
   lines = File.readlines filename
-  source = lines.map{|l| l.gsub("\n", '').split ''}
+  source = lines.map { |l| l.gsub("\n", '').split '' }
 
   solver = Solver.new source
 
-  loop while solver.iter
+  working = solver.iter
+
+  while working do
+    working = solver.iter
+  end
+
   solver.print_result :current
 end
