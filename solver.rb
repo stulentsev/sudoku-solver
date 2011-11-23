@@ -3,7 +3,6 @@ class Solver
     @source_array = arr
     @working_array = deep_clone arr
     @states = []
-    @tried = [[]]
   end
 
   def pass1
@@ -14,7 +13,6 @@ class Solver
 
         options = (1..9).to_a.map(&:to_s) - get_row(r) - get_column(c) - get_quadrant(r, c)
         if options.length == 1
-          #puts "(#{r}, #{c}) => #{options[0]}"
           @working_array[r][c] = options[0]
           changed = true
         elsif options.length == 0
@@ -38,8 +36,6 @@ class Solver
         if options.length == 1
           @working_array[r][c] = options[0]
           changed = true
-        elsif options.length == 0
-          #@no_options = true
         else
           @next_version[r][c] = options
           @has_multiple = true
@@ -100,12 +96,8 @@ class Solver
         el = arr[r][c]
         print '|'
 
-        # TODO: adfasdfadfasdf
-        #   adfasdfkad;fadsf
-
         if el.is_a? Array
           print el.join(',').foreground(:red)
-          #print el.inspect.foreground(:red)
         else
           if @source_array[r][c] != ' '
             print el.foreground(:blue)
@@ -125,7 +117,6 @@ class Solver
     res = @working_array[r].select { |i| i != ' ' }
 
     res += @working_array[r].select { |i| i != ' ' } if version == :next
-    #puts "row #{r}: #{res.join '|'}"
     res.flatten
   end
 
@@ -143,7 +134,6 @@ class Solver
       end
     end
 
-    #puts "column #{c}: #{res.join '|'}"
     res.flatten
   end
 
@@ -168,7 +158,6 @@ class Solver
       end
     end
 
-    #puts "quadrant #{r1}, #{c1}: #{res.join ','}"
     res.flatten
   end
 
@@ -177,8 +166,6 @@ class Solver
       r = rand(9)
       c = rand(9)
       el = @next_version[r][c]
-      #print "\rrandom for (#{r}, #{c}) = #{el.inspect}, stack depth = #{@states.length}                            "
-      #STDOUT.flush
     end while !el.is_a?(Array)
 
     els = el.sample
@@ -193,12 +180,10 @@ class Solver
 
   def push_state
     @states << deep_clone(@working_array)
-    #puts "pushed, length = #{@states.length}"
   end
 
   def pop_state
     @working_array = deep_clone @states.pop
-    #puts "popped, length = #{@states.length}"
   end
 
   def restore_original_state
@@ -206,6 +191,5 @@ class Solver
     @states = []
     puts "restored"
     puts ""
-    #puts "popped, length = #{@states.length}"
   end
 end
