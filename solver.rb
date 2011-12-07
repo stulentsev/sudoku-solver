@@ -36,6 +36,7 @@ class Solver
         if options.length == 1
           @working_array[r][c] = options[0]
           changed = true
+        elsif options.length == 0
         else
           @next_version[r][c] = options
           @has_multiple = true
