@@ -6,7 +6,7 @@
 #   2. Repeat step 1, but use the knowledge gained in it (use both W and F for 
 #      eliminating wrong results).
 #   3. If any new cell values are found, then set W = F and go to step 1. Otherwise, if 
-#      there are cells with multiple candidates for a value, then remember this state, 
+#      there are cells with multiple candidates for a value, then memorize current state, 
 #      pick one of those candidates and go to step 1. If state stack size exceeds N, then
 #      pop the original state and do over (we must have made the wrong random choice
 #      back then).
