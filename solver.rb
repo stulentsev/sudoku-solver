@@ -1,3 +1,15 @@
+# This is implementation of sudoku solver logic. It employs a couple of formal rules
+# and a random recursive search.
+# Basically, it works like this: 
+#   1. Take working field W. Find all empty cells for which we can determine the value
+#      with certainty. Remember these choices in a future version F.
+#   2. Repeat step 1, but use the knowledge gained in it (use both W and F for 
+#      eliminating wrong results).
+#   3. If any new cell values are found, then set W = F and go to step 1. Otherwise, if 
+#      there are cells with multiple candidates for a value, then remember this state, 
+#      pick one of those candidates and go to step 1. If state stack size exceeds N, then
+#      pop the original state and do over (we must have made the wrong random choice
+#      back then).
 class Solver
   def initialize arr
     @source_array = arr
