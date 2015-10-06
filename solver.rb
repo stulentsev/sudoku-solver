@@ -76,13 +76,13 @@ class Solver
       changed = true
     else
       if !changed && @has_multiple
-        push_state
+        depth = push_state
 
-        puts "pushed"
+        puts "pushed (depth: #{depth}, cnt: #{@push_tracker[depth]} )"
         print_result
         puts "\n\n"
 
-        if @states.length >= 5
+        if @states.length >= 50 || @push_tracker[depth] > 70
           restore_original_state
         else
           r, c, o = pick_random_option
@@ -110,12 +110,12 @@ class Solver
         print '|'
 
         if el.is_a? Array
-          print el.join(',').foreground(:red)
+          print Rainbow(el.join(',')).foreground(:red)
         else
           if @source_array[r][c] != ' '
-            print el.foreground(:blue)
+            print Rainbow(el).foreground(:blue)
           else
-            print el.foreground(:green)
+            print Rainbow(el).foreground(:green)
           end
         end
         print '|'
@@ -193,15 +193,22 @@ class Solver
 
   def push_state
     @states << deep_clone(@working_array)
+    
+    @push_tracker ||= {}
+    @push_tracker[@states.length] ||= 0
+    @push_tracker[@states.length] += 1
+    @states.length
   end
 
   def pop_state
     @working_array = deep_clone @states.pop
+    @states.length
   end
 
   def restore_original_state
     @working_array = deep_clone @states.first
     @states = []
+    @push_tracker = {}
     puts "restored"
     puts ""
   end
