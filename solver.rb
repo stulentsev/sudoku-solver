@@ -126,6 +126,19 @@ class Solver
     end
   end
 
+  def print_final
+    arr = @next_version
+
+    (0..8).each do |r|
+      (0..8).each_slice(3) do |c1, c2, c3|
+        print [arr[r][c1], arr[r][c2], arr[r][c3]].join('')
+        print ' '
+      end
+      puts ""
+      puts "" if r % 3 == 2
+    end
+  end
+
   def get_row r, version = :working
     res = @working_array[r].select { |i| i != ' ' }
 

@@ -26,5 +26,5 @@ else
   end
 
   # solution is found, hooray!
-  solver.print_result
+  solver.print_final
 end
