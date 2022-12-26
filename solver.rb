@@ -19,40 +19,38 @@ class Solver
 
   def pass1
     changed = false
-    (0..8).each do |r|
-      (0..8).each do |c|
-        next if @working_array[r][c] != " "
+    
+    each_cell do |r, c|
+      next if @working_array[r][c] != " "
 
-        options = (1..9).to_a.map(&:to_s) - get_row(r) - get_column(c) - get_quadrant(r, c)
-        if options.length == 1
-          @working_array[r][c] = options[0]
-          changed = true
-        elsif options.length == 0
-          @no_options = true
-        else
-          @next_version[r][c] = options
-          @has_multiple = true
-        end
+      options = (1..9).to_a.map(&:to_s) - get_row(r) - get_column(c) - get_quadrant(r, c)
+      if options.length == 1
+        @working_array[r][c] = options[0]
+        changed = true
+      elsif options.length == 0
+        @no_options = true
+      else
+        @next_version[r][c] = options
+        @has_multiple = true
       end
     end
+    
     changed
   end
 
   def pass2
     changed = false
-    (0..8).each do |r|
-      (0..8).each do |c|
-        next if @working_array[r][c] != " "
+    each_cell do |r, c|
+      next if @working_array[r][c] != " "
 
-        options = (1..9).to_a.map(&:to_s) - get_row(r, :next) - get_column(c, :next) - get_quadrant(r, c, :next)
-        if options.length == 1
-          @working_array[r][c] = options[0]
-          changed = true
-        elsif options.length == 0
-        else
-          @next_version[r][c] = options
-          @has_multiple = true
-        end
+      options = (1..9).to_a.map(&:to_s) - get_row(r, :next) - get_column(c, :next) - get_quadrant(r, c, :next)
+      if options.length == 1
+        @working_array[r][c] = options[0]
+        changed = true
+      elsif options.length == 0
+      else
+        @next_version[r][c] = options
+        @has_multiple = true
       end
     end
     changed
@@ -101,8 +99,8 @@ class Solver
   def print_result
     arr = @next_version
 
-    (0..8).each do |r|
-      (0..8).each do |c|
+    LINE.each do |r|
+      LINE.each do |c|
         el = arr[r][c]
         print("|")
 
@@ -126,8 +124,8 @@ class Solver
   def print_final
     arr = @next_version
 
-    (0..8).each do |r|
-      (0..8).each_slice(3) do |c1, c2, c3|
+    LINE.each do |r|
+      LINE.each_slice(3) do |c1, c2, c3|
         print([arr[r][c1], arr[r][c2], arr[r][c3]].join(""))
         print(" ")
       end
@@ -136,22 +134,22 @@ class Solver
     end
   end
 
-  def get_row r, version = :working
+  def get_row(r, version = :working)
     res = @working_array[r].select { |i| i != " " }
 
     res += @working_array[r].select { |i| i != " " } if version == :next
     res.flatten
   end
 
-  def get_column c, version = :working
+  def get_column(c, version = :working)
     res = []
-    (0..8).each do |r|
+    LINE.each do |r|
       el = @working_array[r][c]
       res << el if el != " "
     end
 
     if version == :next
-      (0..8).each do |r|
+      LINE.each do |r|
         el = @next_version[r][c]
         res << el if el != " "
       end
@@ -160,7 +158,7 @@ class Solver
     res.flatten
   end
 
-  def get_quadrant r, c, version = :working
+  def get_quadrant(r, c, version = :working)
     r1 = r / 3 * 3
     c1 = c / 3 * 3
 
@@ -189,7 +187,7 @@ class Solver
       r = rand(9)
       c = rand(9)
       el = @next_version[r][c]
-    end while !el.is_a?(Array)
+    end until el.is_a?(Array)
 
     els = el.sample
     puts("\rrandom for (#{r}, #{c}) = #{els}, stack depth = #{@states.length}                            ")
@@ -197,7 +195,7 @@ class Solver
     [r, c, els]
   end
 
-  def deep_clone obj
+  def deep_clone(obj)
     Marshal.load(Marshal.dump(obj))
   end
 
@@ -221,5 +219,14 @@ class Solver
     @push_tracker = {}
     puts("restored")
     puts("")
+  end
+
+  LINE = 0..8
+  def each_cell(&block)
+    LINE.each do |r|
+      LINE.each do |c|
+        block.call(r, c)
+      end
+    end
   end
 end
