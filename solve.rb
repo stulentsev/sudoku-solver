@@ -3,7 +3,7 @@
 require "bundler"
 Bundler.require
 
-require_relative "solver"
+Dir.glob("src/*.rb").each { |f| require_relative(f) }
 
 if ARGV.empty?
   puts "Usage: ./solve file.txt"
@@ -22,10 +22,9 @@ else
   solver = Solver.new(source)
 
   # work loop. On very hard puzzles may work for a long time (indefnitely?)
-  working = solver.iter
-  while working do
+  begin
     working = solver.iter
-  end
+  end while working
 
   # solution is found, hooray!
   solver.print_final

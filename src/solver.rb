@@ -1,3 +1,5 @@
+require_relative "board"
+
 # This is implementation of sudoku solver logic. It employs a couple of formal rules
 # and a random recursive search.
 # Basically, it works like this:
@@ -19,22 +21,23 @@ class Solver
 
   def pass1
     changed = false
-    
+
     each_cell do |r, c|
       next if @working_array[r][c] != " "
 
       options = (1..9).to_a.map(&:to_s) - get_row(r) - get_column(c) - get_quadrant(r, c)
-      if options.length == 1
+      case options.length
+      when 0
+        @no_options = true
+      when 1
         @working_array[r][c] = options[0]
         changed = true
-      elsif options.length == 0
-        @no_options = true
       else
         @next_version[r][c] = options
         @has_multiple = true
       end
     end
-    
+
     changed
   end
 
@@ -222,6 +225,7 @@ class Solver
   end
 
   LINE = 0..8
+
   def each_cell(&block)
     LINE.each do |r|
       LINE.each do |c|
