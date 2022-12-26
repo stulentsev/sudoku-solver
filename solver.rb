@@ -1,19 +1,19 @@
 # This is implementation of sudoku solver logic. It employs a couple of formal rules
 # and a random recursive search.
-# Basically, it works like this: 
+# Basically, it works like this:
 #   1. Take working field W. Find all empty cells for which we can determine the value
 #      with certainty. Remember these choices in a future version F.
-#   2. Repeat step 1, but use the knowledge gained in it (use both W and F for 
+#   2. Repeat step 1, but use the knowledge gained in it (use both W and F for
 #      eliminating wrong results).
-#   3. If any new cell values are found, then set W = F and go to step 1. Otherwise, if 
-#      there are cells with multiple candidates for a value, then memorize current state, 
+#   3. If any new cell values are found, then set W = F and go to step 1. Otherwise, if
+#      there are cells with multiple candidates for a value, then memorize current state,
 #      pick one of those candidates and go to step 1. If state stack size exceeds N, then
 #      pop the original state and do over (we must have made the wrong random choice
 #      back then).
 class Solver
-  def initialize arr
+  def initialize(arr)
     @source_array = arr
-    @working_array = deep_clone arr
+    @working_array = deep_clone(arr)
     @states = []
   end
 
@@ -21,7 +21,7 @@ class Solver
     changed = false
     (0..8).each do |r|
       (0..8).each do |c|
-        next if @working_array[r][c] != ' '
+        next if @working_array[r][c] != " "
 
         options = (1..9).to_a.map(&:to_s) - get_row(r) - get_column(c) - get_quadrant(r, c)
         if options.length == 1
@@ -42,7 +42,7 @@ class Solver
     changed = false
     (0..8).each do |r|
       (0..8).each do |c|
-        next if @working_array[r][c] != ' '
+        next if @working_array[r][c] != " "
 
         options = (1..9).to_a.map(&:to_s) - get_row(r, :next) - get_column(c, :next) - get_quadrant(r, c, :next)
         if options.length == 1
@@ -59,18 +59,17 @@ class Solver
   end
 
   def iter
-    @next_version = deep_clone @working_array
+    @next_version = deep_clone(@working_array)
 
     @has_multiple = false
     @no_options = false
 
     changed = pass1 || pass2
 
-
     if @no_options
-      puts "popped"
+      puts("popped")
       print_result
-      puts "\n\n"
+      puts("\n\n")
 
       pop_state
       changed = true
@@ -78,9 +77,9 @@ class Solver
       if !changed && @has_multiple
         depth = push_state
 
-        puts "pushed (depth: #{depth}, cnt: #{@push_tracker[depth]} )"
+        puts("pushed (depth: #{depth}, cnt: #{@push_tracker[depth]} )")
         print_result
-        puts "\n\n"
+        puts("\n\n")
 
         if @states.length >= 50 || @push_tracker[depth] > 70
           restore_original_state
@@ -96,10 +95,8 @@ class Solver
       end
     end
 
-
     changed
   end
-
 
   def print_result
     arr = @next_version
@@ -107,18 +104,18 @@ class Solver
     (0..8).each do |r|
       (0..8).each do |c|
         el = arr[r][c]
-        print '|'
+        print("|")
 
-        if el.is_a? Array
-          print Rainbow(el.join(',')).foreground(:red)
+        if el.is_a?(Array)
+          print(Rainbow(el.join(",")).foreground(:red))
         else
-          if @source_array[r][c] != ' '
-            print Rainbow(el).foreground(:blue)
+          if @source_array[r][c] != " "
+            print(Rainbow(el).foreground(:blue))
           else
-            print Rainbow(el).foreground(:green)
+            print(Rainbow(el).foreground(:green))
           end
         end
-        print '|'
+        print "|"
 
         print "\t"
       end
@@ -131,18 +128,18 @@ class Solver
 
     (0..8).each do |r|
       (0..8).each_slice(3) do |c1, c2, c3|
-        print [arr[r][c1], arr[r][c2], arr[r][c3]].join('')
-        print ' '
+        print([arr[r][c1], arr[r][c2], arr[r][c3]].join(""))
+        print(" ")
       end
-      puts ""
-      puts "" if r % 3 == 2
+      puts("")
+      puts("") if r % 3 == 2
     end
   end
 
   def get_row r, version = :working
-    res = @working_array[r].select { |i| i != ' ' }
+    res = @working_array[r].select { |i| i != " " }
 
-    res += @working_array[r].select { |i| i != ' ' } if version == :next
+    res += @working_array[r].select { |i| i != " " } if version == :next
     res.flatten
   end
 
@@ -150,13 +147,13 @@ class Solver
     res = []
     (0..8).each do |r|
       el = @working_array[r][c]
-      res << el if el != ' '
+      res << el if el != " "
     end
 
     if version == :next
       (0..8).each do |r|
         el = @next_version[r][c]
-        res << el if el != ' '
+        res << el if el != " "
       end
     end
 
@@ -168,18 +165,18 @@ class Solver
     c1 = c / 3 * 3
 
     res = []
-    (r1..r1+2).each do |r2|
-      (c1..c1+2).each do |c2|
+    (r1..r1 + 2).each do |r2|
+      (c1..c1 + 2).each do |c2|
         el = @working_array[r2][c2]
-        res << el if el != ' '
+        res << el if el != " "
       end
     end
 
     if version == :next
-      (r1..r1+2).each do |r2|
-        (c1..c1+2).each do |c2|
+      (r1..r1 + 2).each do |r2|
+        (c1..c1 + 2).each do |c2|
           el = @next_version[r2][c2]
-          res << el if el != ' '
+          res << el if el != " "
         end
       end
     end
@@ -195,7 +192,7 @@ class Solver
     end while !el.is_a?(Array)
 
     els = el.sample
-    puts "\rrandom for (#{r}, #{c}) = #{els}, stack depth = #{@states.length}                            "
+    puts("\rrandom for (#{r}, #{c}) = #{els}, stack depth = #{@states.length}                            ")
 
     [r, c, els]
   end
@@ -206,7 +203,7 @@ class Solver
 
   def push_state
     @states << deep_clone(@working_array)
-    
+
     @push_tracker ||= {}
     @push_tracker[@states.length] ||= 0
     @push_tracker[@states.length] += 1
@@ -214,15 +211,15 @@ class Solver
   end
 
   def pop_state
-    @working_array = deep_clone @states.pop
+    @working_array = deep_clone(@states.pop)
     @states.length
   end
 
   def restore_original_state
-    @working_array = deep_clone @states.first
+    @working_array = deep_clone(@states.first)
     @states = []
     @push_tracker = {}
-    puts "restored"
-    puts ""
+    puts("restored")
+    puts("")
   end
 end

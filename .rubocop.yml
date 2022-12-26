@@ -1,0 +1,45 @@
+AllCops:
+  Exclude:
+    - "bundle/**/*"
+  DisabledByDefault: true
+
+# Single quotes being faster is hardly measurable and only affects parse time.
+# Enforcing double quotes reduces the times where you need to change them
+# when introducing an interpolation. Use single quotes only if their semantics
+# are needed.
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/MethodCallWithArgsParentheses:
+  EnforcedStyle: require_parentheses
+  AllowedMethods:
+    - puts
+    - print
+
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented
+
+Layout/IndentationConsistency:
+  Enabled: true
+
+Layout/IndentationStyle:
+  EnforcedStyle: spaces
+  Enabled: true
+
+Layout/EmptyLines:
+  Enabled: true
+
+Layout/TrailingEmptyLines:
+  EnforcedStyle: final_newline
+
+Layout/TrailingWhitespace:
+  Enabled: true
+
+Lint/Debugger:
+  Enabled: true
+
+Style/LambdaCall:
+  Enabled: true
+
+Lint/NonDeterministicRequireOrder:
+  Enabled: true
