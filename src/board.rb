@@ -1,4 +1,7 @@
 # frozen_string_literal: true
+
+require_relative "../boot"
+
 class Board
   Error = Class.new(StandardError)
   UnsupportedValueError = Class.new(Error)
@@ -10,8 +13,8 @@ class Board
 
   def self.from_string(str)
     board = new
-    str.lines[0..WIDTH-1].each_with_index do |line, r|
-      line[0..HEIGHT-1].each_char.with_index do |char, c|
+    str.lines[0..WIDTH - 1].each_with_index do |line, r|
+      line[0..HEIGHT - 1].each_char.with_index do |char, c|
         v = case char
             when /\A[0-9]\z/
               char.to_i
@@ -22,6 +25,10 @@ class Board
       end
     end
     board
+  end
+
+  def self.copy_from(board)
+    new(board)
   end
 
   def initialize(source_board = nil)
@@ -45,16 +52,21 @@ class Board
   def get_row(r)
     storage[r * WIDTH, HEIGHT]
   end
+
+  def get_column(c)
+    (0...HEIGHT).map { |r| get_value(r, c) }
+  end
+
   def get_value(r, c)
     if r < 0 || r >= WIDTH || c < 0 || c >= HEIGHT
-      raise OutOfRangeError
+      raise OutOfRangeError, "r = #{r}, c = #{c}"
     end
     storage[r * WIDTH + c]
   end
 
   def set_value(r, c, v)
     if r < 0 || r >= WIDTH || c < 0 || c >= HEIGHT
-      raise OutOfRangeError
+      raise OutOfRangeError, "r = #{r}, c = #{c}"
     end
 
     case v
@@ -63,6 +75,10 @@ class Board
     else
       raise UnsupportedValueError, "value was #{v.inspect}"
     end
+  end
+
+  def empty?(r, c)
+    get_value(r, c) == EMPTY
   end
 
   private

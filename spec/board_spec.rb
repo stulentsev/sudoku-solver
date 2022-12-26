@@ -1,4 +1,4 @@
-require_relative "../src/board"
+require_relative "../boot"
 
 RSpec.describe Board do
   let(:board) { described_class.new(source_board) }
@@ -80,7 +80,7 @@ RSpec.describe Board do
     end
   end
 
-  describe "from string" do
+  describe ".from_string" do
     let(:board_str) { File.read("spec/fixtures/easy01.txt")}
     let(:board) { described_class.from_string(board_str)}
 
@@ -96,6 +96,29 @@ RSpec.describe Board do
       expect(board.get_row(6)).to eq [4, e, 8, e, e, 7, 9, 6, e]
       expect(board.get_row(7)).to eq [5, 9, e, e, 8, e, 3, e, e]
       expect(board.get_row(8)).to eq [3, 2, 6, 1, e, e, 7, e, 5]
+
+      expect(board.get_column(0)).to eq [e, 6, 8, e, 2, e, 4, 5, 3]
+      expect(board.get_column(1)).to eq [e, e, e, e, e, e, e, 9, 2]
+      expect(board.get_column(2)).to eq [e, e, e, e, e, e, 8, e, 6]
+      expect(board.get_column(3)).to eq [e, 7, e, 2, 3, e, e, e, 1]
+      expect(board.get_column(4)).to eq [2, 1, 9, e, e, e, e, 8, e]
+      expect(board.get_column(5)).to eq [6, 5, e, 4, 8, 1, 7, e, e]
+      expect(board.get_column(6)).to eq [1, e, 5, 6, 4, e, 9, 3, 7]
+      expect(board.get_column(7)).to eq [3, e, e, e, 1, e, 6, e, e]
+      expect(board.get_column(8)).to eq [7, 4, e, e, 9, e, e, e, 5]
+    end
+  end
+
+  describe "#empty?" do
+    it "doesn't consider array empty" do
+      board.set_value(0, 1, 1)
+      board.set_value(0, 2, [2, 3])
+      board.set_value(0, 3, [])
+
+      expect(board.empty?(0, 0)).to eq true
+      expect(board.empty?(0, 1)).to eq false
+      expect(board.empty?(0, 2)).to eq false
+      expect(board.empty?(0, 3)).to eq false
     end
   end
 end

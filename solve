@@ -1,0 +1,19 @@
+#! /usr/bin/env ruby
+
+require_relative "boot"
+
+if ARGV.empty?
+  puts "Usage: ./solve file.txt"
+else
+  filename = ARGV[0]
+  unless File.exists?(filename)
+    puts "#{filename} not found."
+    exit(0)
+  end
+
+  initial_board = Board.from_string(File.read(filename))
+  solver = Solver.new(initial_board)
+  final_board = solver.solve
+
+  BoardPrinter.clean(final_board)
+end

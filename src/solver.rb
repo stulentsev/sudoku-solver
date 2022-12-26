@@ -1,4 +1,4 @@
-require_relative "board"
+require_relative "../boot"
 
 # This is implementation of sudoku solver logic. It employs a couple of formal rules
 # and a random recursive search.
@@ -13,27 +13,37 @@ require_relative "board"
 #      pop the original state and do over (we must have made the wrong random choice
 #      back then).
 class Solver
-  def initialize(arr)
-    @source_array = arr
-    @working_array = deep_clone(arr)
+  def initialize(board, ostream = STDOUT)
+    @original_board = board
+    @working_board = Board.copy_from(board)
     @states = []
+    @push_tracker = {}
+    @ostream = ostream
+  end
+
+  def solve
+    begin
+      working = iter
+    end while working
+
+    next_version
   end
 
   def pass1
     changed = false
 
-    each_cell do |r, c|
-      next if @working_array[r][c] != " "
+    working_board.each_cell_value do |r, c, v|
+      next unless working_board.empty?(r, c)
 
-      options = (1..9).to_a.map(&:to_s) - get_row(r) - get_column(c) - get_quadrant(r, c)
+      options = (1..9).to_a - get_row(r) - get_column(c) - get_quadrant(r, c)
       case options.length
       when 0
         @no_options = true
       when 1
-        @working_array[r][c] = options[0]
+        working_board.set_value(r, c, options[0])
         changed = true
       else
-        @next_version[r][c] = options
+        next_version.set_value(r, c, options)
         @has_multiple = true
       end
     end
@@ -43,51 +53,53 @@ class Solver
 
   def pass2
     changed = false
-    each_cell do |r, c|
-      next if @working_array[r][c] != " "
 
-      options = (1..9).to_a.map(&:to_s) - get_row(r, :next) - get_column(c, :next) - get_quadrant(r, c, :next)
+    working_board.each_cell_value do |r, c, v|
+      next unless working_board.empty?(r, c)
+
+      options = (1..9).to_a - get_row(r, :next) - get_column(c, :next) - get_quadrant(r, c, :next)
       if options.length == 1
-        @working_array[r][c] = options[0]
+        working_board.set_value(r, c, options[0])
         changed = true
       elsif options.length == 0
       else
-        @next_version[r][c] = options
+        next_version.set_value(r, c, options)
         @has_multiple = true
       end
     end
+
     changed
   end
 
   def iter
-    @next_version = deep_clone(@working_array)
+    @next_version = Board.copy_from(working_board)
 
     @has_multiple = false
     @no_options = false
 
     changed = pass1 || pass2
 
-    if @no_options
-      puts("popped")
+    if no_options
+      ostream.puts("popped")
       print_result
-      puts("\n\n")
+      ostream.puts("\n\n")
 
       pop_state
       changed = true
     else
-      if !changed && @has_multiple
+      if !changed && has_multiple
         depth = push_state
 
-        puts("pushed (depth: #{depth}, cnt: #{@push_tracker[depth]} )")
+        ostream.puts("pushed (depth: #{depth}, cnt: #{push_tracker[depth]} )")
         print_result
-        puts("\n\n")
+        ostream.puts("\n\n")
 
-        if @states.length >= 50 || @push_tracker[depth] > 70
+        if states.length >= 50 || push_tracker[depth] > 70
           restore_original_state
         else
           r, c, o = pick_random_option
           if o
-            @working_array[r][c] = o
+            working_board.set_value(r, c, o)
           else
             pop_state
           end
@@ -99,63 +111,19 @@ class Solver
     changed
   end
 
-  def print_result
-    arr = @next_version
-
-    LINE.each do |r|
-      LINE.each do |c|
-        el = arr[r][c]
-        print("|")
-
-        if el.is_a?(Array)
-          print(Rainbow(el.join(",")).foreground(:red))
-        else
-          if @source_array[r][c] != " "
-            print(Rainbow(el).foreground(:blue))
-          else
-            print(Rainbow(el).foreground(:green))
-          end
-        end
-        print "|"
-
-        print "\t"
-      end
-      puts ""
-    end
-  end
-
-  def print_final
-    arr = @next_version
-
-    LINE.each do |r|
-      LINE.each_slice(3) do |c1, c2, c3|
-        print([arr[r][c1], arr[r][c2], arr[r][c3]].join(""))
-        print(" ")
-      end
-      puts("")
-      puts("") if r % 3 == 2
-    end
-  end
-
   def get_row(r, version = :working)
-    res = @working_array[r].select { |i| i != " " }
+    res = working_board.get_row(r)
+    if version == :next
+      res += next_version.get_row(r)
+    end
 
-    res += @working_array[r].select { |i| i != " " } if version == :next
     res.flatten
   end
 
   def get_column(c, version = :working)
-    res = []
-    LINE.each do |r|
-      el = @working_array[r][c]
-      res << el if el != " "
-    end
-
+    res = working_board.get_column(c)
     if version == :next
-      LINE.each do |r|
-        el = @next_version[r][c]
-        res << el if el != " "
-      end
+      res += next_version.get_column(c)
     end
 
     res.flatten
@@ -168,16 +136,18 @@ class Solver
     res = []
     (r1..r1 + 2).each do |r2|
       (c1..c1 + 2).each do |c2|
-        el = @working_array[r2][c2]
-        res << el if el != " "
+        unless working_board.empty?(r2, c2)
+          res << working_board.get_value(r2, c2)
+        end
       end
     end
 
     if version == :next
       (r1..r1 + 2).each do |r2|
         (c1..c1 + 2).each do |c2|
-          el = @next_version[r2][c2]
-          res << el if el != " "
+          unless next_version.empty?(r2, c2)
+            res << next_version.get_value(r2, c2)
+          end
         end
       end
     end
@@ -189,48 +159,42 @@ class Solver
     begin
       r = rand(9)
       c = rand(9)
-      el = @next_version[r][c]
+      el = next_version.get_value(r, c)
     end until el.is_a?(Array)
 
     els = el.sample
-    puts("\rrandom for (#{r}, #{c}) = #{els}, stack depth = #{@states.length}                            ")
+    ostream.puts("\rrandom for (#{r}, #{c}) = #{els}, stack depth = #{states.length}                            ")
 
     [r, c, els]
   end
 
-  def deep_clone(obj)
-    Marshal.load(Marshal.dump(obj))
-  end
-
   def push_state
-    @states << deep_clone(@working_array)
+    states << Board.copy_from(working_board)
 
-    @push_tracker ||= {}
-    @push_tracker[@states.length] ||= 0
-    @push_tracker[@states.length] += 1
-    @states.length
+    push_tracker[states.length] ||= 0
+    push_tracker[states.length] += 1
+    states.length
   end
 
   def pop_state
-    @working_array = deep_clone(@states.pop)
-    @states.length
+    @working_board = Board.copy_from(states.pop)
+    states.length
   end
 
   def restore_original_state
-    @working_array = deep_clone(@states.first)
+    @working_board = Board.copy_from(states.first)
     @states = []
     @push_tracker = {}
-    puts("restored")
-    puts("")
+    ostream.puts("restored")
+    ostream.puts("")
   end
 
-  LINE = 0..8
+  private
+  
+  attr_reader :original_board, :working_board, :next_version, :states,
+              :push_tracker, :has_multiple, :no_options, :ostream
 
-  def each_cell(&block)
-    LINE.each do |r|
-      LINE.each do |c|
-        block.call(r, c)
-      end
-    end
+  def print_result
+    BoardPrinter.new(ostream).intermediate(next_version, original_board)
   end
 end
