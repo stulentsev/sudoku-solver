@@ -1,6 +1,8 @@
 #! /usr/bin/env ruby
 
-require 'rainbow'
+require "bundler"
+Bundler.require
+
 require_relative 'solver'
 
 if ARGV.length == 0
