@@ -29,6 +29,7 @@ fn main() {
     }
 }
 
+#[derive(Copy, Clone)]
 struct DlxNode {
     id: usize,
     l: usize,
@@ -130,32 +131,16 @@ impl ArenaBuilder {
             self.append_up(node.c, node);
         }
     }
-}
 
-impl SudokuSolver {
-    pub fn new(size: usize) -> Self {
+    fn build(&mut self, size: usize) -> Self {
         let sqrt_size = size.isqrt();
         let num_constraints = 4; // four constraints: pos (row-col), row, column, sector/block
-        let column_count = size * size // grid size
-            * num_constraints;
-
-        let row_count = size * size // every possible position on the board
-            * size; // holding every possible symbol
-
-        let cell_count = row_count * num_constraints; // node per constraint
-
-        let arena_size = 1 + // root node
-            column_count + cell_count;
-
-        let solution_size = size * size;
-
-        let mut builder = ArenaBuilder::new(arena_size);
 
         for _ in 0..num_constraints * size * size {
-            let node_id = builder.peek_id();
-            let col_id = builder.peek_id();
+            let node_id = self.peek_id();
+            let col_id = self.peek_id();
             let header = DlxNode::new(node_id, col_id);
-            builder.append_left(0, header);
+            self.append_left(0, header);
         }
 
         for num in 0..size {
@@ -163,7 +148,7 @@ impl SudokuSolver {
                 for col in 0..size {
                     // need to create 4 nodes now
                     let mut nodes = Vec::with_capacity(4);
-                    let base_id = builder.peek_id();
+                    let base_id = self.peek_id();
                     let row_id = pack_row_id(size, row, col, num);
                     let blk = {
                         let r1 = row / sqrt_size;
@@ -198,10 +183,35 @@ impl SudokuSolver {
                         nodes[j].l = nodes[i].id;
                     }
 
-                    builder.append_row(nodes);
+                    self.append_row(nodes);
                 }
             }
         }
+
+        Self {
+            arena: self.arena.iter().copied().collect(),
+        }
+    }
+}
+
+impl SudokuSolver {
+    pub fn new(size: usize) -> Self {
+        let num_constraints = 4; // four constraints: pos (row-col), row, column, sector/block
+        let column_count = size * size // grid size
+            * num_constraints;
+
+        let row_count = size * size // every possible position on the board
+            * size; // holding every possible symbol
+
+        let cell_count = row_count * num_constraints; // node per constraint
+
+        let arena_size = 1 + // root node
+            column_count + cell_count;
+
+        let solution_size = size * size;
+
+        let mut builder = ArenaBuilder::new(arena_size);
+        builder.build(size);
 
         Self {
             arena: builder.arena,
