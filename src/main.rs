@@ -2,6 +2,7 @@ use std::env::args;
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader};
+use std::time::Instant;
 
 macro_rules! parse_input {
     ($x:expr, $t:ident) => ($x.trim().parse::<$t>().unwrap())
@@ -16,11 +17,13 @@ fn main() {
         lines.push(row);
     }
 
+    let start = Instant::now();
     let mut solver = SudokuSolver::new();
     let k =solver.seed(lines);
 
     if solver.search(k as usize) {
         print_solution(&solver.solution);
+        eprintln!("elapsed: {:?}", start.elapsed());
     } else {
         println!("solution not found");
     }
