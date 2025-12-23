@@ -1,7 +1,5 @@
 use std::env::args;
-use std::fs::File;
 use std::io;
-use std::io::{BufRead, BufReader};
 use std::time::Instant;
 
 macro_rules! parse_input {
@@ -9,8 +7,10 @@ macro_rules! parse_input {
 }
 
 fn main() {
-    let mut lines = Vec::with_capacity(25);
-    for i in 0..25 as usize {
+    let args: Vec<String> = args().skip(1).collect();
+    let size = parse_input!(args.first().unwrap_or(&"9".to_string()), usize);
+    let mut lines = Vec::with_capacity(size);
+    for _ in 0..size {
         let mut input_line = String::new();
         io::stdin().read_line(&mut input_line).unwrap();
         let row = input_line.trim_matches('\n').to_string();
@@ -18,57 +18,31 @@ fn main() {
     }
 
     let start = Instant::now();
-    let mut solver = SudokuSolver::new();
+    let mut solver = SudokuSolver::new(size);
     let k =solver.seed(lines);
 
-    if solver.search(k as usize) {
-        print_solution(&solver.solution);
+    if solver.search(k) {
+        solver.print_solution(&solver.solution);
         eprintln!("elapsed: {:?}", start.elapsed());
     } else {
         println!("solution not found");
     }
 }
 
-fn pack_row_id(s: u16, r: u16, c: u16, v: u16) -> u16 {
-    r * s * s + c * s + v
-}
-
-// returns (r, c, v)
-fn unpack_row_id(s: u16, id: u16) -> (u16, u16, u16) {
-    (id / s / s, id / s % s, id % s)
-}
-
-fn print_solution(solution: &[u16]) {
-    let mut grid = [['.'; 25]; 25];
-
-    for row_id in solution {
-        let (r, c, v) = unpack_row_id(25, *row_id);
-        let char = (b'A' + v as u8) as char;
-        grid[r as usize][c as usize] = char;
-    }
-
-    for row in grid.iter() {
-        for char in row.iter() {
-            print!("{}", char);
-        }
-        println!();
-    }
-}
-
 struct DlxNode {
-    id: u16,
-    l: u16,
-    r: u16,
-    u: u16,
-    d: u16,
+    id: usize,
+    l: usize,
+    r: usize,
+    u: usize,
+    d: usize,
 
-    c: u16, // column
-    row_id: u16,
-    size: u16,
+    c: usize, // column
+    row_id: usize,
+    size: usize,
 }
 
 impl DlxNode {
-    fn new(node_id: u16, col_id: u16) -> Self {
+    fn new(node_id: usize, col_id: usize) -> Self {
         DlxNode {
             id: node_id,
             l: node_id,
@@ -82,7 +56,7 @@ impl DlxNode {
         }
     }
 
-    fn row_cell(node_id: u16, col_id: u16, row_id: u16) -> Self {
+    fn row_cell(node_id: usize, col_id: usize, row_id: usize) -> Self {
         DlxNode {
             id: node_id,
             l: node_id,
@@ -98,14 +72,15 @@ impl DlxNode {
 }
 
 struct SudokuSolver {
+    size: usize,
     arena: Vec<DlxNode>,
-    solution: Vec<u16>,
+    solution: Vec<usize>,
 }
 
-const HEADER_CEL: u16 = 0;
-const HEADER_ROW: u16 = 1;
-const HEADER_COL: u16 = 2;
-const HEADER_BLK: u16 = 3;
+const HEADER_CEL: usize = 0;
+const HEADER_ROW: usize = 1;
+const HEADER_COL: usize = 2;
+const HEADER_BLK: usize = 3;
 
 struct ArenaBuilder {
     arena: Vec<DlxNode>,
@@ -118,32 +93,32 @@ impl ArenaBuilder {
         Self { arena }
     }
 
-    fn peek_id(&self) -> u16 {
-        self.arena.len() as u16
+    fn peek_id(&self) -> usize {
+        self.arena.len()
     }
 
-    fn append_left(&mut self, node_id: u16, mut new_node: DlxNode) {
-        let source = node_id as usize;
+    fn append_left(&mut self, node_id: usize, mut new_node: DlxNode) {
+        let source = node_id;
         new_node.l = self.arena[source].l;
         new_node.r = node_id;
 
         let source_left = self.arena[source].l;
-        self.arena[source_left as usize].r = new_node.id;
+        self.arena[source_left].r = new_node.id;
 
         self.arena[source].l = new_node.id;
 
         self.arena.push(new_node);
     }
 
-    fn append_up(&mut self, node_id: u16, mut new_node: DlxNode) {
-        let source = node_id as usize;
+    fn append_up(&mut self, node_id: usize, mut new_node: DlxNode) {
+        let source = node_id;
         new_node.c = self.arena[source].c;
 
         new_node.u = self.arena[source].u;
         new_node.d = node_id;
 
         let source_up = self.arena[source].u;
-        self.arena[source_up as usize].d = new_node.id;
+        self.arena[source_up].d = new_node.id;
 
         self.arena[source].u = new_node.id;
         self.arena[source].size += 1;
@@ -158,14 +133,14 @@ impl ArenaBuilder {
 }
 
 impl SudokuSolver {
-    pub fn new() -> Self {
-        let size: u16 = 25;
+    pub fn new(size: usize) -> Self {
+        let sqrt_size = size.isqrt();
         let num_constraints = 4; // four constraints: pos (row-col), row, column, sector/block
         let column_count = size * size // grid size
             * num_constraints;
 
         let row_count = size * size // every possible position on the board
-            * 25; // holding every possible symbol
+            * size; // holding every possible symbol
 
         let cell_count = row_count * num_constraints; // node per constraint
 
@@ -174,7 +149,7 @@ impl SudokuSolver {
 
         let solution_size = size * size;
 
-        let mut builder = ArenaBuilder::new(arena_size as usize);
+        let mut builder = ArenaBuilder::new(arena_size);
 
         for _ in 0..num_constraints * size * size {
             let node_id = builder.peek_id();
@@ -191,9 +166,9 @@ impl SudokuSolver {
                     let base_id = builder.peek_id();
                     let row_id = pack_row_id(size, row, col, num);
                     let blk = {
-                        let r1 = row / 5;
-                        let c1 = col / 5;
-                        r1 * 5 + c1
+                        let r1 = row / sqrt_size;
+                        let c1 = col / sqrt_size;
+                        r1 * sqrt_size + c1
                     };
 
                     nodes.push(DlxNode::row_cell(
@@ -230,111 +205,112 @@ impl SudokuSolver {
 
         Self {
             arena: builder.arena,
-            solution: vec![0; solution_size as usize],
+            solution: vec![0; solution_size],
+            size,
         }
     }
 
-    fn seed(&mut self, lines: Vec<String>) -> u16 {
-        let size = 25;
+    fn seed(&mut self, lines: Vec<String>) -> usize {
         let mut k = 0;
+        let sqrt_size = self.size.isqrt();
         for (line_idx, line) in lines.iter().enumerate() {
             for (char_idx, char) in line.chars().enumerate() {
-                if char == '.' {
+                if char == '.' || char == ' ' {
                     continue;
                 }
                 k += 1;
-                let num = (char as u8 - b'A') as u16;
+                let num = self.encode_symbol(char);
                 let blk = {
-                    let r1 = line_idx / 5;
-                    let c1 = char_idx / 5;
-                    r1 * 5 + c1
+                    let r1 = line_idx / sqrt_size;
+                    let c1 = char_idx / sqrt_size;
+                    r1 * sqrt_size + c1
                 };
 
-                self.cover(1 + HEADER_CEL * size * size + line_idx as u16 * size + char_idx as u16);
-                self.cover(1 + HEADER_ROW * size * size + line_idx as u16 * size + num);
-                self.cover(1 + HEADER_COL * size * size + char_idx as u16 * size + num);
-                self.cover(1 + HEADER_BLK * size * size + blk as u16 * size + num);
+                self.cover(1 + HEADER_CEL * self.size * self.size + line_idx  * self.size + char_idx);
+                self.cover(1 + HEADER_ROW * self.size * self.size + line_idx  * self.size + num);
+                self.cover(1 + HEADER_COL * self.size * self.size + char_idx * self.size + num);
+                self.cover(1 + HEADER_BLK * self.size * self.size + blk  * self.size + num);
 
-                let row_id = pack_row_id(size, line_idx as u16, char_idx as u16, num);
+                let row_id = pack_row_id(self.size, line_idx, char_idx, num);
                 self.solution.push(row_id);
             }
         }
         k
     }
 
-    pub fn cover(&mut self, col_id: u16) {
+    pub fn cover(&mut self, col_id: usize) {
         // unlink from the control row
-        let l = self.arena[col_id as usize].l;
-        let r = self.arena[col_id as usize].r;
-        self.arena[l as usize].r = r;
-        self.arena[r as usize].l = l;
+        let l = self.arena[col_id].l;
+        let r = self.arena[col_id].r;
+        self.arena[l].r = r;
+        self.arena[r].l = l;
 
-        let mut d = self.arena[col_id as usize].d;
+        let mut d = self.arena[col_id].d;
 
         loop {
             if d == col_id {
                 break;
             }
 
-            let mut r = self.arena[d as usize].r;
+            let mut r = self.arena[d].r;
 
             loop {
                 if r == d {
                     break;
                 }
 
-                let r_up = self.arena[r as usize].u;
-                let r_down = self.arena[r as usize].d;
-                let r_col = self.arena[r as usize].c;
+                let r_up = self.arena[r].u;
+                let r_down = self.arena[r].d;
+                let r_col = self.arena[r].c;
 
-                self.arena[r_up as usize].d = self.arena[r as usize].d;
-                self.arena[r_down as usize].u = self.arena[r as usize].u;
-                self.arena[r_col as usize].size -= 1;
+                self.arena[r_up].d = self.arena[r].d;
+                self.arena[r_down].u = self.arena[r].u;
+                self.arena[r_col].size -= 1;
 
-                r = self.arena[r as usize].r;
+                r = self.arena[r].r;
             }
 
-            d = self.arena[d as usize].d;
+            d = self.arena[d].d;
         }
     }
 
-    pub fn uncover(&mut self, col_id: u16) {
+    pub fn uncover(&mut self, col_id: usize) {
         // up, then left
         //  re-link vertically
-        let mut u = self.arena[col_id as usize].u;
+        let mut u = self.arena[col_id].u;
 
         loop {
             if u == col_id {
                 break;
             }
 
-            let mut l = self.arena[u as usize].l;
+            let mut l = self.arena[u].l;
 
             loop {
                 if l == u {
                     break;
                 }
 
-                let l_up = self.arena[l as usize].u;
-                let l_down = self.arena[l as usize].d;
-                let l_col = self.arena[l as usize].c;
+                let l_up = self.arena[l].u;
+                let l_down = self.arena[l].d;
+                let l_col = self.arena[l].c;
 
                 // re-link vertically
-                self.arena[l_up as usize].d = l;
-                self.arena[l_down as usize].u = l;
-                self.arena[l_col as usize].size += 1;
+                self.arena[l_up].d = l;
+                self.arena[l_down].u = l;
+                self.arena[l_col].size += 1;
 
-                l = self.arena[l as usize].l;
+                l = self.arena[l].l;
             }
 
-            u = self.arena[u as usize].u;
+            u = self.arena[u].u;
         }
 
         // relink to control row
-        let l = self.arena[col_id as usize].l;
-        let r = self.arena[col_id as usize].r;
-        self.arena[l as usize].r = col_id;
-        self.arena[r as usize].l = col_id;
+        let l = self.arena[col_id].l;
+        let r = self.arena[col_id].r;
+        self.arena[l].r = col_id;
+        self.arena[r].l = col_id;
     }
 
     pub fn search(&mut self, k: usize) -> bool {
@@ -345,7 +321,7 @@ impl SudokuSolver {
         let col_id = self.pick_column();
         self.cover(col_id);
 
-        let mut row = self.arena[col_id as usize].d;
+        let mut row = self.arena[col_id].d;
 
         loop {
             if row == col_id {
@@ -353,16 +329,16 @@ impl SudokuSolver {
             }
 
             // choose row
-            self.solution[k] = self.arena[row as usize].row_id;
+            self.solution[k] = self.arena[row].row_id;
             
             // cover columns
-            let mut r = self.arena[row as usize].r;
+            let mut r = self.arena[row].r;
             loop {
                 if r == row { break }
 
-                self.cover(self.arena[r as usize].c);
+                self.cover(self.arena[r].c);
 
-                r = self.arena[r as usize].r;
+                r = self.arena[r].r;
             }
             
             
@@ -372,16 +348,16 @@ impl SudokuSolver {
             }
             
             // uncover columns
-            let mut l = self.arena[row as usize].l;
+            let mut l = self.arena[row].l;
             loop {
                 if l == row { break }
 
-                self.uncover(self.arena[l as usize].c);
+                self.uncover(self.arena[l].c);
 
-                l = self.arena[l as usize].l;
+                l = self.arena[l].l;
             }
             
-            row = self.arena[row as usize].d;
+            row = self.arena[row].d;
         }
 
         self.uncover(col_id);
@@ -390,16 +366,16 @@ impl SudokuSolver {
     }
 
     // go through the control row and select a column with minimal size
-    fn pick_column(&self) -> u16 {
-        let mut min_size = u16::MAX;
-        let mut best = 0u16;
+    fn pick_column(&self) -> usize {
+        let mut min_size = usize::MAX;
+        let mut best = 0usize;
 
         let mut c = self.arena[0].r;
         loop {
             if c == 0 { // back to root
                 break;
             }
-            let col = &self.arena[c as usize];
+            let col = &self.arena[c];
             if col.size < 2 {
                 return c
             }
@@ -408,8 +384,52 @@ impl SudokuSolver {
                 min_size = col.size;
                 best = c;
             }
-            c = self.arena[c as usize].r;
+            c = self.arena[c].r;
         }
         best
     }
+
+    fn encode_symbol(&self, char: char) -> usize {
+        match self.size {
+            25 => (char as u8 - b'A') as usize,
+            9 => (char as u8 - b'1') as usize,
+            s => panic!("unsupported puzzle size: {}", s)
+        }
+    }
+
+    fn decode_symbol(&self, v: usize) -> char {
+        match self.size {
+            25 => (b'A' + v as u8) as char,
+            9 => (b'1' + v as u8) as char,
+            s => panic!("unsupported puzzle size: {}", s)
+        }
+    }
+
+    fn print_solution(&self, solution: &[usize]) {
+        let mut grid = vec![vec!['.'; self.size]; self.size];
+
+        for row_id in solution {
+            let (r, c, v) = self.unpack_row_id(*row_id);
+            let char = self.decode_symbol(v);
+            grid[r][c] = char;
+        }
+
+        for row in grid.iter() {
+            for char in row.iter() {
+                print!("{}", char);
+            }
+            println!();
+        }
+    }
+
+
+    // returns (r, c, v)
+    fn unpack_row_id(&self, id: usize) -> (usize, usize, usize) {
+        let s = self.size;
+        (id / s / s, id / s % s, id % s)
+    }
+}
+
+fn pack_row_id(s: usize, r: usize, c: usize, v: usize) -> usize {
+    r * s * s + c * s + v
 }
